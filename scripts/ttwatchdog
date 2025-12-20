@@ -1,0 +1,43 @@
+#! /usr/bin/env python3
+
+import sys
+import json
+import socket
+import time
+
+import ttgateway.commands as cmds
+from ttgateway.config import Config
+
+
+class GatewayExitStatus:
+    SUCCESS = 0
+    UNKNOWN_ERROR = 1
+    GW_CONN_ERROR = 2
+    SERVER_NOT_RUNNING = 3
+
+
+if __name__ == "__main__":
+    time.sleep(30)
+    try:
+        gw_socket = socket.socket(socket.AF_UNIX)
+        gw_socket.connect(Config.SERVER_SOCKET)
+        gw_socket.sendall(cmds.GatewayCheck().serialize())
+
+        raw_data = gw_socket.recv(1024)
+        data_length = int.from_bytes(raw_data[0:4], "little")
+        data = bytearray()
+        data += raw_data[4:]
+        while len(data) < data_length:
+            raw_data = gw_socket.recv(1024)
+            data += raw_data
+        rsp = json.loads(data.decode())
+        if rsp["success"] and not rsp["data"]["connection_alive"]:
+            # Gateway connection error
+            sys.exit(GatewayExitStatus.GW_CONN_ERROR)
+    except FileNotFoundError:
+        sys.exit(GatewayExitStatus.SERVER_NOT_RUNNING)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        sys.exit(GatewayExitStatus.UNKNOWN_ERROR)
+    sys.exit(GatewayExitStatus.SUCCESS)

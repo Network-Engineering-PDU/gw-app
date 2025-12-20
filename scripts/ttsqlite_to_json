@@ -1,0 +1,47 @@
+#! /usr/bin/env python3
+
+import os
+import sys
+import json
+import sqlite3
+
+
+def main(sqlite_file):
+    data = {}
+
+    conn = sqlite3.connect(sqlite_file)
+    query = "SELECT address FROM address;"
+    data["unicast_address"], = conn.execute(query).fetchone()
+    query = "SELECT netkey FROM netkey;"
+    netkey, = conn.execute(query).fetchone()
+    data["netkey"] = netkey.hex()
+    data["nodes"] = []
+    for n in conn.execute("SELECT * FROM node;"):
+        data["nodes"].append({
+            "name": n[3],
+            "mac": n[0].to_bytes(6, "big").hex(),
+            "uuid": n[1].hex(),
+            "unicast_address": n[2],
+            "devkey": n[4].hex(),
+            "sleep_period": n[5],
+        })
+
+    print(data)
+
+    if sqlite_file.endswith(".db"):
+        json_prename = sqlite_file[:-3]
+    else:
+        json_prename = sqlite_file
+    json_name = json_prename + ".json"
+    n = 1
+    while os.path.exists(json_name):
+        json_name = json_prename + str(n) + (".json")
+        n += 1
+
+    with open(json_name, "w") as f:
+        json.dump(data, f, indent=2)
+
+    
+if __name__ == "__main__":
+    sqlite_file = sys.argv[1]
+    main(sqlite_file)
