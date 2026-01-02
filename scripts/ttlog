@@ -1,0 +1,14 @@
+#! /usr/bin/env bash
+FILE="$HOME/.tychetools/logs/log"
+
+if [[ -n ${GATEWAY2} ]]; then
+	FILE="$HOME/.tychetools2/logs/log"
+fi
+
+printf "\n\033[1m\033[36mTycheTools gateway log (press CTRL-C to exit)\033[0m\n\n"
+
+if [[ ! -e $FILE ]]; then
+	mkdir -p $(dirname -- $FILE)
+	touch $FILE
+fi
+tail -F $FILE 2> /dev/null

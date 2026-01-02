@@ -1,0 +1,56 @@
+#! /usr/bin/env python3
+
+import os
+import sys
+import json
+import sqlite3
+
+
+def main(json_file):
+    with open(json_file) as f:
+        data = json.load(f)
+
+    if json_file.endswith(".json"):
+        db_prename = json_file[:-5]
+    else:
+        db_prename = json_file
+    db_name = db_prename + ".db"
+    n = 1
+    while os.path.exists(db_name):
+        db_name = db_prename + str(n) + (".db")
+        n += 1
+
+    conn = sqlite3.connect(db_name)
+
+    conn.execute("CREATE TABLE netkey (netkey BLOB);")
+    netkey = bytes.fromhex(data["netkey"])
+    conn.execute("INSERT INTO netkey VALUES (?);", (netkey,))
+    conn.execute("CREATE TABLE address (address INTEGER);")
+    if "address" in data:
+        address = data["address"]
+    else:
+        address = data["unicast_address"]
+    conn.execute("INSERT INTO address VALUES (?);", (address,))
+
+    conn.execute("""CREATE TABLE IF NOT EXISTS node (
+        mac INTEGER PRIMARY KEY,
+        uuid BLOB,
+        address INTEGER UNIQUE,
+        name TEXT,
+        devkey BLOB,
+        sleep_period INTEGER DEFAULT 0
+    );""")
+
+    for node in data["nodes"]:
+        v = (int.from_bytes(bytes.fromhex(node["mac"]), "big"),
+            bytes.fromhex(node["uuid"]), node["unicast_address"], node["name"],
+            bytes.fromhex(node["devkey"]), node["sleep_period"])
+        conn.execute("REPLACE INTO node VALUES (?, ?, ?, ?, ?, ?);", v)
+
+    conn.commit()
+    print(f"SQLite {db_name} database created")
+
+
+if __name__ == "__main__":
+    json_file = sys.argv[1]
+    main(json_file)
