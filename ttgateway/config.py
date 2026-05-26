@@ -237,6 +237,9 @@ class Config:
                 self._set_config(self.config, json.load(f))
         except (json.JSONDecodeError, FileNotFoundError):
             pass
+        # Always re-detect platform from /etc/ttversion to override any cached config
+        # This ensures platform detection is based on actual hardware, not cached values
+        self.config.gateway.platform = self.get_platform()
         self.loaded = True
         self.fix_urls()
 
