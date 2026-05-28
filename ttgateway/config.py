@@ -134,14 +134,12 @@ class Config:
         self.default_gwrc = [
             "fault enable",
             "app enable backend",
-            "app enable ble_discovery",
             "start_remote_client",
             "start_http_logging",
         ]
         self.default_negwrc = [
             "gateway_manager init",
             "app enable net_eng",
-            "app enable ble_discovery",
         ]
 
 
