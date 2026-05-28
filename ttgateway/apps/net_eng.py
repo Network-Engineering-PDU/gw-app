@@ -108,16 +108,25 @@ class NetworkEngineeringApp:
         This enables MST01/BeaconX and other non-mesh beacons to appear
         in the NE UI even when they cannot be provisioned.
         """
-        # Log raw event data for diagnostics and vendor parsing
-        try:
-            self.logger.debug("Unprovisioned advert event data: %s", event.data)
-        except Exception:
-            pass
-
         adv_addr = event.data.get("adv_addr")
         if not adv_addr:
             return
         mac = adv_addr.hex().upper()
+
+        # Log event details for screen/debug output, including UUID and RSSI.
+        try:
+            self.logger.info(
+                "Unprovisioned advert received: mac=%s uuid=%s rssi=%s "
+                "gatt_supported=%s adv_addr_type=%s",
+                mac,
+                event.data.get("uuid").hex() if event.data.get("uuid") else None,
+                event.data.get("rssi"),
+                event.data.get("gatt_supported"),
+                event.data.get("adv_addr_type"),
+            )
+            self.logger.debug("Unprovisioned advert raw event data: %s", event.data)
+        except Exception:
+            pass
 
         # Try to create a sensor entry (ignore failures)
         body_new = {"mac_address": mac}

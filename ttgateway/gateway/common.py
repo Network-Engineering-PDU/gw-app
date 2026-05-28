@@ -373,8 +373,11 @@ class GatewayCommon:
         if isinstance(command, cmds.GatewayStartScan):
             if not self.is_started():
                 return command.response("Gateway not initialized", False)
-            #uuid_filter = ['DA51']
-            uuid_filter = ['DA51', '0639']
+            # Scan for all unprovisioned advertisements instead of limiting to
+            # hardcoded mesh UUID prefixes. This lets the gateway discover
+            # generic BLE beacons such as MST01 / BeaconX Pro if the underlying
+            # firmware reports them as unprovisioned adverts.
+            uuid_filter = []
             self.gw.start_scan(uuid_filter, timeout=command.timeout,
                 one=command.one)
             return command.response()
