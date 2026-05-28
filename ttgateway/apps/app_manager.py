@@ -8,6 +8,7 @@ from ttgateway.apps.air_quality import AirQualityApp
 from ttgateway.apps.csv import CsvApp
 from ttgateway.apps.net_eng import NetworkEngineeringApp
 from ttgateway.apps.automation import AutomationApp
+from ttgateway.apps.ble_discovery import BLESensorDiscovery
 try:
     from ttgateway.apps.influx import InfluxApp
 except ImportError:
@@ -39,6 +40,7 @@ class AppManager:
             "csv": CsvApp(),
             "net_eng": NetworkEngineeringApp(self.server.node_db),
             "automation": AutomationApp(self.server),
+            "ble_discovery": BLESensorDiscovery(),
         }
         if InfluxApp:
             self.interfaces["influx"] = InfluxApp()
