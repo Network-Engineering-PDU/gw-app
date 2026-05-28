@@ -70,6 +70,44 @@ class NetworkEngineeringApp:
             self.create_node_entry(event.node.mac)
         self.data[event.node.mac]["battery"] = event.data["bat"]
 
+    def _parse_mst01_payload(self, payload):
+        if not isinstance(payload, (bytes, bytearray)):
+            return None
+        if b"MST01" not in payload:
+            return None
+        if len(payload) < 9:
+            return None
+        try:
+            temp_raw = int.from_bytes(payload[5:7], "big")
+            humidity_raw = int.from_bytes(payload[7:9], "big")
+            temperature = round(temp_raw / 256.0, 2)
+            humidity = round(humidity_raw / 256.0, 2)
+            if 0 <= temperature <= 80 and 0 <= humidity <= 100:
+                return {
+                    "temperature": temperature,
+                    "humidity": humidity,
+                }
+        except Exception:
+            pass
+        return None
+
+    def _parse_beaconx_pro_payload(self, payload):
+        if not isinstance(payload, (bytes, bytearray)) or len(payload) < 8:
+            return None
+        # Heuristic scan for plausible temp/humidity pairs inside BeaconX service data.
+        for offset in range(0, len(payload) - 4):
+            try:
+                temperature = int.from_bytes(payload[offset:offset + 2], "big") / 100.0
+                humidity = int.from_bytes(payload[offset + 2:offset + 4], "big") / 100.0
+                if 0 <= temperature <= 80 and 0 <= humidity <= 100:
+                    return {
+                        "temperature": temperature,
+                        "humidity": humidity,
+                    }
+            except Exception:
+                continue
+        return None
+
     async def send_data(self):
         if not self.data:
             return
@@ -135,22 +173,59 @@ class NetworkEngineeringApp:
         except Exception:
             # don't fail the handler on HTTP errors
             pass
-        # Try to extract vendor-specific fields from advertisement payloads
+
+        # Try to extract vendor-specific fields from advertisement payloads or bluetoothctl info
         temperature = None
         battery = None
         manuf_bytes = None
-        # Common keys that might contain manufacturer/adv payload
-        for k in ("manuf", "manuf_data", "manufacturer_data", "adv_payload", "adv_data", "data"):
-            if k in event.data and event.data[k]:
-                manuf_bytes = event.data[k]
-                break
+        local_name = event.data.get("local_name")
+        manufacturer_data = event.data.get("manufacturer_data")
+        service_data = event.data.get("service_data")
+
+        if local_name:
+            self.logger.info("Unprovisioned advert local_name=%s", local_name)
+
+        if isinstance(manufacturer_data, dict):
+            for key, payload in manufacturer_data.items():
+                if isinstance(payload, (bytes, bytearray)) and payload:
+                    self.logger.debug("ManufacturerData 0x%04x=%s", key, payload.hex())
+                    if key == 0x0639:
+                        parsed = self._parse_mst01_payload(payload)
+                        if parsed:
+                            temperature = parsed.get("temperature")
+                            humidity = parsed.get("humidity")
+                            self.logger.info("Parsed MST01 advertisement: temp=%s humidity=%s", temperature, humidity)
+                    if not manuf_bytes:
+                        manuf_bytes = payload
+                    break
+        elif isinstance(manufacturer_data, (bytes, bytearray)):
+            manuf_bytes = manufacturer_data
+
+        if not manuf_bytes and isinstance(service_data, dict):
+            for key, payload in service_data.items():
+                if isinstance(payload, (bytes, bytearray)) and payload:
+                    self.logger.debug("ServiceData %s=%s", key, payload.hex())
+                    if key == "feab" or key == "FEAB":
+                        parsed = self._parse_beaconx_pro_payload(payload)
+                        if parsed:
+                            temperature = parsed.get("temperature")
+                            humidity = parsed.get("humidity")
+                            self.logger.info("Parsed BeaconX Pro advertisement: temp=%s humidity=%s", temperature, humidity)
+                    if not manuf_bytes:
+                        manuf_bytes = payload
+                    break
+        elif not manuf_bytes and isinstance(service_data, (bytes, bytearray)):
+            manuf_bytes = service_data
 
         if isinstance(manuf_bytes, (bytes, bytearray)):
             try:
                 # convert to printable ascii for heuristic parsing
                 ascii = ''.join((chr(b) if 32 <= b <= 126 else '.') for b in manuf_bytes)
-                # look for device id hints
-                if 'MST' in ascii or 'BEACON' in ascii.upper() or 'BEACONX' in ascii.upper():
+                self.logger.debug("Unprovisioned advert payload ascii=%s", ascii)
+                # only apply loose heuristics when exact payload parsing did not already succeed
+                if temperature is None and humidity is None and (
+                    'MST' in ascii or 'BEACON' in ascii.upper() or 'BEACONX' in ascii.upper()
+                ):
                     import re
                     nums = re.findall(r"\d{3,5}", ascii)
                     if nums:
@@ -173,6 +248,19 @@ class NetworkEngineeringApp:
                                 temperature = val
             except Exception:
                 pass
+
+        if not manuf_bytes and local_name and 'BEACONX' in local_name.upper():
+            self.logger.debug("BeaconX Pro advert detected by local_name=%s", local_name)
+        
+        if isinstance(manufacturer_data, dict) and 0x0639 in manufacturer_data:
+            self.logger.debug("Minew MST01 candidate manufacturer payload=%s", manufacturer_data[0x0639].hex())
+            if manufacturer_data[0x0639] and not temperature:
+                manuf_bytes = manufacturer_data[0x0639]
+                try:
+                    ascii = ''.join((chr(b) if 32 <= b <= 126 else '.') for b in manuf_bytes)
+                    self.logger.debug("Minew payload ascii=%s", ascii)
+                except Exception:
+                    pass
 
         # Post a minimal telemetry datapoint (RSSI and any parsed fields)
         rssi = event.data.get("rssi", 0)
