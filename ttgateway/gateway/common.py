@@ -373,8 +373,7 @@ class GatewayCommon:
         if isinstance(command, cmds.GatewayStartScan):
             if not self.is_started():
                 return command.response("Gateway not initialized", False)
-            #uuid_filter = ['DA51']
-            uuid_filter = ['DA51', '0639']
+            uuid_filter = []
             self.gw.start_scan(uuid_filter, timeout=command.timeout,
                 one=command.one)
             return command.response()
