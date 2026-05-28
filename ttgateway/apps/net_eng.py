@@ -1,6 +1,7 @@
 from datetime import datetime as dt
 
 from ttgwlib import EventType
+import logging
 
 from ttgateway import utils
 from ttgateway.http_helper import HttpHelper
@@ -23,11 +24,13 @@ class NetworkEngineeringApp:
             (EventType.TEMP_DATA, self.telemetry_handler),
             (EventType.TEMP_DATA_RELIABLE, self.telemetry_handler),
             (EventType.BAT_DATA, self.battery_handler),
+            (EventType.UNPROV_DISC, self.unprov_handler),
             (EventType.PROV_COMPLETE, self.prov_complete_handler),
             (EventType.PROV_LINK_CLOSED, self.prov_link_closed_handler),
         ]
         self.new_node_devkey = None # ProvComplete only gives DevKey, which is
                                     # used to get the new node
+        self.logger = logging.getLogger(__name__)
 
     async def enable(self):
         if not self.task:
@@ -96,3 +99,85 @@ class NetworkEngineeringApp:
                         self.SENSOR_NEW_URL, body)
                     return
         self.new_node_devkey = None
+
+    async def unprov_handler(self, event):
+        """Handle unprovisioned BLE adverts and forward basic info to NE.
+
+        Creates a sensor entry (`sensors-new`) and posts a minimal
+        telemetry sample (`sensors-data`) containing RSSI and timestamp.
+        This enables MST01/BeaconX and other non-mesh beacons to appear
+        in the NE UI even when they cannot be provisioned.
+        """
+        # Log raw event data for diagnostics and vendor parsing
+        try:
+            self.logger.debug("Unprovisioned advert event data: %s", event.data)
+        except Exception:
+            pass
+
+        adv_addr = event.data.get("adv_addr")
+        if not adv_addr:
+            return
+        mac = adv_addr.hex().upper()
+
+        # Try to create a sensor entry (ignore failures)
+        body_new = {"mac_address": mac}
+        try:
+            await self.http.request("ne_sensor", "POST", self.SENSOR_NEW_URL, body_new)
+        except Exception:
+            # don't fail the handler on HTTP errors
+            pass
+        # Try to extract vendor-specific fields from advertisement payloads
+        temperature = None
+        battery = None
+        manuf_bytes = None
+        # Common keys that might contain manufacturer/adv payload
+        for k in ("manuf", "manuf_data", "manufacturer_data", "adv_payload", "adv_data", "data"):
+            if k in event.data and event.data[k]:
+                manuf_bytes = event.data[k]
+                break
+
+        if isinstance(manuf_bytes, (bytes, bytearray)):
+            try:
+                # convert to printable ascii for heuristic parsing
+                ascii = ''.join((chr(b) if 32 <= b <= 126 else '.') for b in manuf_bytes)
+                # look for device id hints
+                if 'MST' in ascii or 'BEACON' in ascii.upper() or 'BEACONX' in ascii.upper():
+                    import re
+                    nums = re.findall(r"\d{3,5}", ascii)
+                    if nums:
+                        # heuristic: if two numbers, treat as temp then battery
+                        if len(nums) >= 2:
+                            try:
+                                temperature = int(nums[0])
+                            except:
+                                temperature = None
+                            try:
+                                battery = int(nums[1])
+                            except:
+                                battery = None
+                        else:
+                            val = int(nums[0])
+                            # if value looks like mV battery
+                            if 2000 <= val <= 4200:
+                                battery = val
+                            else:
+                                temperature = val
+            except Exception:
+                pass
+
+        # Post a minimal telemetry datapoint (RSSI and any parsed fields)
+        rssi = event.data.get("rssi", 0)
+        sample = {
+            "mac_address": mac,
+            "datetime": dt.utcnow().strftime("%d/%m/%Y %H:%M"),
+            "temperature": temperature,
+            "humidity": None,
+            "pressure": None,
+            "rssi": rssi,
+            "battery": battery,
+        }
+        body_data = {"data": [sample]}
+        try:
+            await self.http.request("ne_data", "POST", self.SENSOR_DATA_URL, body_data)
+        except Exception:
+            pass
