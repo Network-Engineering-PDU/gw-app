@@ -71,24 +71,39 @@ class NetworkEngineeringApp:
         self.data[event.node.mac]["battery"] = event.data["bat"]
 
     def _parse_mst01_payload(self, payload):
+        """Parse Minew MST01 sensor manufacturer data (Company ID 0x0639).
+        
+        Supports:
+        - T&H live frame: mfr_data[0]=0xCA, mfr_data[1]=0x05
+        - Heartbeat/info frame: mfr_data[0]=0xCA, mfr_data[1]=0x00
+        """
         if not isinstance(payload, (bytes, bytearray)):
             return None
-        if b"MST01" not in payload:
+        
+        if len(payload) < 9 or payload[0] != 0xCA:
             return None
-        if len(payload) < 9:
-            return None
+
         try:
-            temp_raw = int.from_bytes(payload[5:7], "big")
-            humidity_raw = int.from_bytes(payload[7:9], "big")
-            temperature = round(temp_raw / 256.0, 2)
-            humidity = round(humidity_raw / 256.0, 2)
-            if 0 <= temperature <= 80 and 0 <= humidity <= 100:
+            # T&H live frame
+            if payload[1] == 0x05:
+                temp_c = payload[5] + payload[6] / 256.0
+                hum_pct = payload[7] + payload[8] / 256.0
                 return {
-                    "temperature": temperature,
-                    "humidity": humidity,
+                    "frame": "TH",
+                    "temperature": round(temp_c, 2),
+                    "humidity": round(hum_pct, 1),
                 }
-        except Exception:
+            
+            # Heartbeat/info frame
+            if payload[1] == 0x00:
+                return {
+                    "frame": "INFO",
+                    "battery_pct": payload[8],
+                    "battery_mv": payload[3] * 100,
+                }
+        except (IndexError, TypeError):
             pass
+        
         return None
 
     def _parse_beaconx_pro_payload(self, payload):
@@ -176,6 +191,7 @@ class NetworkEngineeringApp:
 
         # Try to extract vendor-specific fields from advertisement payloads or bluetoothctl info
         temperature = None
+        humidity = None
         battery = None
         manuf_bytes = None
         local_name = event.data.get("local_name")
@@ -268,7 +284,7 @@ class NetworkEngineeringApp:
             "mac_address": mac,
             "datetime": dt.utcnow().strftime("%d/%m/%Y %H:%M"),
             "temperature": temperature,
-            "humidity": None,
+            "humidity": humidity,
             "pressure": None,
             "rssi": rssi,
             "battery": battery,
