@@ -114,7 +114,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
  - Use monotonic clk in stead of real clk for periodic actions
  - Backup manager checks if data is corrupt
- - TycheTools api url forwarded to single-database backend
+ - Network-Engineering-PDU api url forwarded to single-database backend
 
 ## [1.11.0] - 2023-02-03
 ### Added
@@ -187,17 +187,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
  - This changelog
 
-[Unreleased]: https://bitbucket.org/tychetools/gw-app/branches/compare/devel..master
-[1.8.1]: https://bitbucket.org/tychetools/gw-app/branches/compare/1.8.1..1.8.0
-[1.8.2]: https://bitbucket.org/tychetools/gw-app/branches/compare/1.8.2..1.8.1
-[1.9.0]: https://bitbucket.org/tychetools/gw-app/branches/compare/1.9.0..1.8.2
-[1.9.1]: https://bitbucket.org/tychetools/gw-app/branches/compare/1.9.1..1.9.0
-[1.10.0]: https://bitbucket.org/tychetools/gw-app/branches/compare/1.10.0..1.9.1
-[1.11.0]: https://bitbucket.org/tychetools/gw-app/branches/compare/1.11.0..1.10.0
-[1.12.0]: https://bitbucket.org/tychetools/gw-app/branches/compare/1.12.0..1.11.0
-[1.12.1]: https://bitbucket.org/tychetools/gw-app/branches/compare/1.12.1..1.12.0
-[1.13.0]: https://bitbucket.org/tychetools/gw-app/branches/compare/1.13.0..1.12.1
-[1.14.0]: https://bitbucket.org/tychetools/gw-app/branches/compare/1.14.0..1.13.0
-[1.14.1]: https://bitbucket.org/tychetools/gw-app/branches/compare/1.14.1..1.14.0
-[1.14.2]: https://bitbucket.org/tychetools/gw-app/branches/compare/1.14.2..1.14.1
-[1.14.3]: https://bitbucket.org/tychetools/gw-app/branches/compare/1.14.3..1.14.2
+[Unreleased]: https://github.com/Network-Engineering-PDU/gw-app/branches/compare/devel..master
+[1.8.1]: https://github.com/Network-Engineering-PDU/gw-app/branches/compare/1.8.1..1.8.0
+[1.8.2]: https://github.com/Network-Engineering-PDU/gw-app/branches/compare/1.8.2..1.8.1
+[1.9.0]: https://github.com/Network-Engineering-PDU/gw-app/branches/compare/1.9.0..1.8.2
+[1.9.1]: https://github.com/Network-Engineering-PDU/gw-app/branches/compare/1.9.1..1.9.0
+[1.10.0]: https://github.com/Network-Engineering-PDU/gw-app/branches/compare/1.10.0..1.9.1
+[1.11.0]: https://github.com/Network-Engineering-PDU/gw-app/branches/compare/1.11.0..1.10.0
+[1.12.0]: https://github.com/Network-Engineering-PDU/gw-app/branches/compare/1.12.0..1.11.0
+[1.12.1]: https://github.com/Network-Engineering-PDU/gw-app/branches/compare/1.12.1..1.12.0
+[1.13.0]: https://github.com/Network-Engineering-PDU/gw-app/branches/compare/1.13.0..1.12.1
+[1.14.0]: https://github.com/Network-Engineering-PDU/gw-app/branches/compare/1.14.0..1.13.0
+[1.14.1]: https://github.com/Network-Engineering-PDU/gw-app/branches/compare/1.14.1..1.14.0
+[1.14.2]: https://github.com/Network-Engineering-PDU/gw-app/branches/compare/1.14.2..1.14.1
+[1.14.3]: https://github.com/Network-Engineering-PDU/gw-app/branches/compare/1.14.3..1.14.2

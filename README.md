@@ -11,7 +11,7 @@ type the following command:
 
 This will install the application and also the required dependencies.
 
-## ttdaemon - TycheTools daemon
+## ttdaemon - Network-Engineering-PDU daemon
 Gateway application daemon. This is the main gateway process. It receives and
 processes any events sent by the gateway microcontroller. It is also in charge
 of forwarding the telemetry and battery data from the sensors (through http,
@@ -20,7 +20,7 @@ snmp, etc...).
 To interact with it, the daemon creates a server on an unix socket. This server
 can receive a number of actions or commands, defined in *ttgateway/commands.py*.
 
-It creates a directory, *~/.tychetools*, to store some files. The file
+It creates a directory, *~/.Network-Engineering-PDU*, to store some files. The file
 *gw.config* has some general configuration parameters. On startup, the daemon
 executes the commands found in *gwrc* (see ttcli commands). On this directory
 can also be found the *log* and *mesh_nodes.db* files.
@@ -29,7 +29,7 @@ can also be found the *log* and *mesh_nodes.db* files.
 $ ttdaemon start|stop|restart
 ```
 
-## ttcli - TycheTools command line interface
+## ttcli - Network-Engineering-PDU command line interface
 
 Main interface to configure and control the gateway daemon. It starts a
 command line interface implemented using the python library cmd2, which allows
@@ -51,7 +51,7 @@ $ ttcli example_command
 example response
 ```
 
-## ttcli_remote - TycheTools remote command line interface
+## ttcli_remote - Network-Engineering-PDU remote command line interface
 
 Remote interface to configure and control gateways. It displays a list of connected gateways and allows to send commands in the same way *ttcli* does.
 
@@ -64,7 +64,7 @@ example response
 ```
 
 
-## ttlog - TycheTools log
+## ttlog - Network-Engineering-PDU log
 
 Opens a real time log. To exit, press CTRL+C.
 
@@ -72,7 +72,7 @@ Opens a real time log. To exit, press CTRL+C.
 $ ttlog
 ```
 
-## ttdiagnosis - TycheTools diagnosis
+## ttdiagnosis - Network-Engineering-PDU diagnosis
 
 If run from a gateway, it runs a set of tests and returns a JSON with diagnostic information. If run from a non-gateway machine, it displays a list of connected gateways and allows to be perform a diagnostic on any of them.
 
@@ -80,7 +80,7 @@ If run from a gateway, it runs a set of tests and returns a JSON with diagnostic
 $ ttdiagnosis
 ```
 
-## ttwatchdog - TycheTools watchdog
+## ttwatchdog - Network-Engineering-PDU watchdog
 
 Periodically checks gateway status and reboots the machine if the nRF52 connection is not alive:
 

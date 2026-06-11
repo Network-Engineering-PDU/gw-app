@@ -27,9 +27,9 @@ setuptools.setup(
     ],
     python_requires=">=3.7",
     install_requires=[
-        "cmd2==2.4.1",
-        "requests==2.27.1",
-        "websockets==10.2",
+        "cmd2>=2.3.0",
+        "requests>=2.25.0",
+        "websockets>=10.0",
         f"ttgwlib=={lib_version}",
     ],
     extras_require={
