@@ -83,7 +83,7 @@ class NetworkType:
 
     @classmethod
     def get_interfaces(cls):
-        return ["wwan0", "ppp0", "wlan0", "eth0", "eth1"]
+        return ["wwan0", "ppp0", "wlan0", "eth0"]
 
     @classmethod
     def from_interface(cls, interface):
@@ -91,7 +91,7 @@ class NetworkType:
             return cls.LTE_4G
         if interface == "wlan0":
             return cls.WIFI
-        if interface == "eth0" or interface == "eth1":
+        if interface == "eth0":
             return cls.ETH_DHCP
         return cls.UNCONF
 
@@ -108,18 +108,9 @@ class NetworkType:
         return False
 
     @classmethod
-    def to_interface(cls, network_type, eth_interface="eth0"):
-        """Return interface name for network type.
-        
-        Args:
-            network_type: Type of network connection
-            eth_interface: Ethernet interface to use (eth0 or eth1). Default: eth0
-        
-        Returns:
-            Interface name (eth0, eth1, wlan0, ppp0, etc.)
-        """
+    def to_interface(cls, network_type):
         if network_type == cls.ETH_DHCP or network_type == cls.ETH_STATIC:
-            return eth_interface
+            return "eth0"
         if network_type == cls.WIFI:
             return "wlan0"
         if network_type == cls.LTE_4G:
