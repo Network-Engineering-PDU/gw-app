@@ -113,7 +113,7 @@ def dict_to_attr_dict(d):
     return d
 
 class Config:
-    VERSION = "1.14.3"
+    VERSION = "1.14.4"
     LIB_VERSION = "1.12.2"
     TT_DIR = os.path.expanduser("~/.tychetools")
     CONFIG_FILE = f"{TT_DIR}/gw.config"
