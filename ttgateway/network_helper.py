@@ -12,49 +12,23 @@ class NetworkHelper:
     @classmethod
     async def get_network_data(cls) -> 'NetworkData':
         platform = config.gateway.platform
-        if platform in (
-            "heimdall",
-            "heimdall_v1",
-            "heimdall_v2",
-            "cm",
-            "cm_v1",
-            "cm_v2",
-        ):
+        if platform in ("heimdall", "heimdall_v1", "heimdall_v2"):
             return await cls.get_network_data_heimdall()
         return await cls.get_network_data_desktop()
 
     @classmethod
     async def _get_ip_from_if(cls, iface):
-        if not iface:
-            return NetworkData(ip=None, mask=None, gateway=None)
         ip, mask, gateway = None, None, None
-        retval, output = await utils.shell(f"nmcli -t d show {iface}")
-        if retval != 0 or output is None:
-            return NetworkData(ip=None, mask=None, gateway=None)
+        _, output = await utils.shell(f"nmcli -t d show {iface}")
         for l in output.split("\n"):
             if "IP4.ADDRESS[1]" in l:
                 ip = l.split(":",1)[1].strip()
             if "IP4.GATEWAY" in l:
                 gateway = l.split(":",1)[1].strip()
-        if not ip:
-            return NetworkData(ip=None, mask=None, gateway=gateway)
         iface_ip = ipaddress.IPv4Interface(ip)
         ip = str(iface_ip.ip)
         mask = str(iface_ip.netmask)
         return NetworkData(ip=ip, mask=mask, gateway=gateway)
-
-    @classmethod
-    async def _get_active_connection_device(cls, connection):
-        retval, output = await utils.shell(
-            "nmcli -t -f NAME,DEVICE connection show --active"
-        )
-        if retval != 0 or output is None:
-            return None
-        for line in output.splitlines():
-            name, separator, device = line.rpartition(":")
-            if separator and name == connection and device:
-                return device
-        return None
 
     @classmethod
     async def get_network_data_heimdall(cls) -> 'NetworkData':
@@ -64,7 +38,7 @@ class NetworkHelper:
             retval, output = await utils.shell(
                 f"nmcli -t -f GENERAL.STATE con show {cls.ETH_CONN}")
             if "activated" in output:
-                iface = await cls._get_active_connection_device(cls.ETH_CONN)
+                iface = NetworkType.to_interface(nw_type)
                 return await cls._get_ip_from_if(iface)
         retval, output = await utils.shell(f"nmcli -t con show {cls.WIFI_CONN}")
         if retval == 0: # Wifi is configured
@@ -72,7 +46,7 @@ class NetworkHelper:
             retval, output = await utils.shell(
                 f"nmcli -t -f GENERAL.STATE con show {cls.WIFI_CONN}")
             if "activated" in output:
-                iface = await cls._get_active_connection_device(cls.WIFI_CONN)
+                iface = NetworkType.to_interface(nw_type)
                 return await cls._get_ip_from_if(iface)
         # In other cases the connection is dhcp
         nw_type = NetworkType.ETH_DHCP
@@ -88,14 +62,11 @@ class NetworkHelper:
         retval, output = await utils.shell("ip route")
         if retval != 0 or output is None:
             return
-        match = re.search(r"default via ([\d.]+)", output)
+        match = re.search("default via ([\d\.]+)", output)
         if match:
             gateway = match.group(1)
             network = ".".join(gateway.split(".")[:-1] + ["0"])
-            match = re.search(
-                rf"({re.escape(network)}/\d+) [\w0 ]+ ([\d.]+)",
-                output,
-            )
+            match = re.search(f"({network}/\d+) [\w0 ]+ ([\d\.]+)", output)
             if match:
                 mask = str(ipaddress.IPv4Interface(match.group(1)).netmask)
                 ip = match.group(2)
@@ -112,7 +83,7 @@ class NetworkType:
 
     @classmethod
     def get_interfaces(cls):
-        return ["wwan0", "ppp0", "wlan0", "br0", "eth0", "eth1"]
+        return ["wwan0", "ppp0", "wlan0", "eth0", "eth1"]
 
     @classmethod
     def from_interface(cls, interface):
@@ -120,7 +91,7 @@ class NetworkType:
             return cls.LTE_4G
         if interface == "wlan0":
             return cls.WIFI
-        if interface in ("br0", "eth0", "eth1"):
+        if interface == "eth0" or interface == "eth1":
             return cls.ETH_DHCP
         return cls.UNCONF
 
