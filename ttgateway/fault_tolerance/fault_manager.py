@@ -12,6 +12,7 @@ from ttgateway.fault_tolerance.mesh_transport import MeshTransport
 from ttgateway.fault_tolerance.udp_transport import UdpTransport
 from ttgateway.fault_tolerance.backend_helper import FaultBackendHelper
 from ttgateway.gateway.gateway_manager import GatewayManagerConfig, GatewayRole
+from ttgateway.to_thread_helper import to_thread
 
 
 logger = logging.getLogger(__name__)
@@ -237,17 +238,26 @@ class FaultManager:
         await self.stop()
         self.start()
 
-    async def wait_for_internet_connection(self):
+    async def wait_for_internet_connection(self, retries=60, delay=2):
         """ Waits for an internet connection to be available.
+
+        Runs the (blocking) connectivity check off the event loop and
+        actually awaits the delay between attempts, so this no longer stalls
+        the whole daemon while waiting.
+
+        :param retries: Number of connectivity check attempts before giving up.
+        :type retries: int
+
+        :param delay: Seconds to wait between attempts.
+        :type delay: float
 
         :return: True if an internet connection is established, False otherwise.
         :rtype: bool
         """
-        retries = 60
-        while not utils.check_internet_connection():
+        while not await to_thread(utils.check_internet_connection):
             if retries == 0:
                 return False
-            asyncio.sleep(2)
+            await asyncio.sleep(delay)
             retries -= 1
         return True
 
